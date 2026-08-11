@@ -146,14 +146,17 @@ def test_corrida_completa(sources, config, monkeypatch):
 
 
 def test_estado_marca_novedades_en_la_segunda_corrida(sources, config, monkeypatch):
+    # Con notify_mode=siempre el segundo aviso sale igual, informando que no
+    # hubo novedades; es lo que hace visible el conteo.
+    cfg = dataclasses.replace(config, notify_mode="siempre")
     monkeypatch.setattr(main_mod, "active_sources", lambda *a, **k: sources)
     mensajes: list[str] = []
     _capturar_envios(monkeypatch, mensajes)
 
-    main_mod.run(config)
+    main_mod.run(cfg)
     assert "4 nuevos" in mensajes[0]
 
-    main_mod.run(config)
+    main_mod.run(cfg)
     assert "sin novedades" in mensajes[1]
 
 

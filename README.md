@@ -1,8 +1,8 @@
 # Agente de Noticias
 
-Cada 30 minutos recolecta los titulares nacionales (Chile) e internacionales de
-una veintena de medios, los deduplica, publica una página web con el resultado y
-te manda el enlace por WhatsApp.
+Cada 2 horas recolecta los titulares nacionales (Chile) e internacionales de una
+veintena de medios, los deduplica, publica una página web con el resultado y te
+manda el enlace por WhatsApp cuando hay noticias nuevas.
 
 Todo corre en GitHub Actions: no hace falta un servidor ni dejar el computador
 encendido.
@@ -18,8 +18,8 @@ RSS de ~24 medios ──▶ deduplicar y ordenar ──▶ página en GitHub Pag
 ## ⚠️ Antes de empezar: este repositorio es privado
 
 GitHub Pages **no funciona en repositorios privados** con una cuenta gratuita, y
-las corridas de Actions consumen la cuota mensual (48 corridas diarias gastan
-cerca del 70% de los 2.000 minutos gratis).
+las corridas de Actions consumen la cuota mensual (12 corridas diarias gastan
+cerca del 18% de los 2.000 minutos gratis).
 
 Tenés dos caminos:
 
@@ -84,7 +84,7 @@ Se configuran en **Settings → Secrets and variables → Actions → Variables*
 | --- | --- | --- |
 | `SITE_TITLE` | `Últimas noticias` | Título de la página y del WhatsApp |
 | `TIMEZONE` | `America/Santiago` | Zona horaria de las horas mostradas |
-| `NOTIFY_MODE` | `siempre` | `solo-nuevas` evita el mensaje cuando no hay titulares nuevos |
+| `NOTIFY_MODE` | `solo-nuevas` | Sólo avisa si hay titulares nuevos; `siempre` avisa en cada corrida |
 | `NOTIFY_HEADLINES` | `3` | Cuántos titulares por sección van en el WhatsApp |
 | `MAX_ITEMS_PER_SECTION` | `40` | Cuántas noticias muestra la página por sección |
 | `MAX_AGE_HOURS` | `24` | Descarta noticias más viejas que esto |
@@ -92,17 +92,27 @@ Se configuran en **Settings → Secrets and variables → Actions → Variables*
 | `FUENTES_EXCLUIDAS` | — | Apaga fuentes por nombre (`Infobae, Publimetro`) |
 | `SITE_URL` | se deduce | Sólo si usás un dominio propio |
 
-### Sobre las 48 notificaciones diarias
+### Cadencia de los avisos
 
-Pediste el aviso cada 30 minutos y así quedó configurado, pero son **48 mensajes
-por día**. Si resulta demasiado, hay dos formas de bajarlo sin tocar código:
+La configuración actual: la página se actualiza **cada 2 horas** y el WhatsApp
+llega **sólo cuando hay titulares nuevos** (`NOTIFY_MODE=solo-nuevas`). En la
+práctica son unos pocos mensajes al día, concentrados en las horas de más
+movimiento noticioso.
 
-- `NOTIFY_MODE=solo-nuevas`: la página se sigue actualizando cada 30 minutos,
-  pero el WhatsApp llega sólo cuando hay titulares que no habías visto.
-- Cambiar el cron en `.github/workflows/noticias.yml`. Por ejemplo
-  `0 */2 * * *` para cada dos horas, o `0 8,13,20 * * *` para tres veces al día
-  (ojo: el cron se interpreta en UTC; Chile está 3 o 4 horas atrás según la época
-  del año).
+Para cambiarlo sin tocar código, creá la variable `NOTIFY_MODE` con valor
+`siempre` y vas a recibir un mensaje en cada corrida, aunque no haya novedades.
+
+Para cambiar la frecuencia, editá el cron en `.github/workflows/noticias.yml`:
+
+| Cron | Frecuencia |
+| --- | --- |
+| `0 */2 * * *` | cada 2 horas (actual) |
+| `*/30 * * * *` | cada 30 minutos |
+| `0 */6 * * *` | cada 6 horas |
+| `0 11,16,23 * * *` | 3 veces al día (8:00, 13:00 y 20:00 en Chile) |
+
+Ojo: el cron se interpreta en **UTC**, y Chile está 3 o 4 horas atrás según la
+época del año.
 
 ---
 
@@ -175,7 +185,7 @@ indicar que importa.
 **Orden.** Manda la frescura, con un empujón por cobertura múltiple.
 
 **Estado.** Los identificadores de lo ya visto se guardan en la caché de Actions,
-no en el repositorio, para no generar 48 commits diarios. Si la caché se pierde,
+no en el repositorio, para no generar un commit por corrida. Si la caché se pierde,
 la próxima corrida trata todo como nuevo: no se rompe nada.
 
 ---

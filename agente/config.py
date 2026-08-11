@@ -50,9 +50,9 @@ class Config:
     # --- WhatsApp (CallMeBot) ---
     whatsapp_phone: str = ""
     whatsapp_apikey: str = ""
-    # "siempre" envía en cada corrida; "solo-nuevas" calla si no hay titulares
-    # nuevos respecto de la corrida anterior.
-    notify_mode: str = "siempre"
+    # "solo-nuevas" calla cuando no hay titulares nuevos respecto de la corrida
+    # anterior; "siempre" envía en cada corrida.
+    notify_mode: str = "solo-nuevas"
     notify_headlines: int = 3
     dry_run: bool = False
 
@@ -86,8 +86,8 @@ class Config:
             excluded_sources=_env_set("FUENTES_EXCLUIDAS"),
             whatsapp_phone=os.environ.get("CALLMEBOT_PHONE", "").strip(),
             whatsapp_apikey=os.environ.get("CALLMEBOT_APIKEY", "").strip(),
-            notify_mode=os.environ.get("NOTIFY_MODE", "siempre").strip().lower()
-            or "siempre",
+            notify_mode=os.environ.get("NOTIFY_MODE", "solo-nuevas").strip().lower()
+            or "solo-nuevas",
             notify_headlines=_env_int("NOTIFY_HEADLINES", 3),
             dry_run=_env_bool("DRY_RUN", False),
             state_file=os.environ.get("STATE_FILE", ".estado/vistos.json").strip()

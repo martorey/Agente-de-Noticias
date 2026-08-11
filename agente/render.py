@@ -319,7 +319,7 @@ def render_page(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Titulares nacionales e internacionales, actualizados automáticamente cada 30 minutos.">
+<meta name="description" content="Titulares nacionales e internacionales, actualizados automáticamente.">
 <meta name="robots" content="noindex">
 <meta property="og:title" content="{escape(config.site_title)}">
 <meta property="og:description" content="{total} titulares · actualizado {escape(_fmt_full(generated_at, tz))}">
@@ -342,7 +342,7 @@ def render_page(
 <main class="wrap">{blocks}</main>
 <footer class="site">
   <div class="wrap">
-    <p>Se actualiza automáticamente cada 30 minutos. Los titulares y enlaces pertenecen a sus medios.</p>
+    <p>Se actualiza automáticamente. Los titulares y enlaces pertenecen a sus medios.</p>
     {_health_block(results)}
   </div>
 </footer>
