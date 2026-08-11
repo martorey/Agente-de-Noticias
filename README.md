@@ -118,21 +118,41 @@ Ojo: el cron se interpreta en **UTC**, y Chile está 3 o 4 horas atrás según l
 
 ## Fuentes
 
-**Chile** — Emol, BioBioChile, La Tercera, Cooperativa, T13, El Mostrador,
-24 Horas, ADN Radio, CNN Chile, La Nación, El Dínamo, Ex-Ante, Meganoticias,
-Diario Financiero.
+Verificadas el 11-08-2026 con el workflow de diagnóstico.
 
-**Internacional** — BBC Mundo, DW Español, France 24, Euronews, CNN Español,
-El País, Infobae, swissinfo. (Al Jazeera y The Guardian están disponibles pero
-apagadas por estar en inglés.)
+**Chile** — La Tercera, ADN Radio, BioBioChile, Ex-Ante, La Nación y Google
+News Chile.
+
+**Internacional** — BBC Mundo, Euronews, France 24, El País, DW Español,
+Infobae y Google News Mundo.
+
+Emol, T13, Cooperativa, El Mostrador, 24 Horas, CNN Chile, Meganoticias,
+El Dínamo y Diario Financiero **bloquean el acceso a su RSS** (404 en todas las
+rutas conocidas; Emol directamente corta la conexión). Entran igual a la página
+a través de Google News, que sí los indexa: el agente toma el medio real del
+titular, así que las tarjetas dicen "Emol" o "T13", no "Google News".
+
+Quedan declaradas pero apagadas para que el diagnóstico semanal las siga
+revisando; si vuelven a publicar RSS basta con poner `enabled=True` en
+`agente/sources.py`. Al Jazeera y The Guardian también están apagadas, por estar
+en inglés: se habilitan con `FUENTES_EXTRA`.
 
 Los medios cambian la ruta de sus feeds de vez en cuando, así que cada fuente
 declara varias URLs candidatas y el agente usa la primera que responde. Si una
 fuente se cae, la corrida sigue con el resto y la página muestra al pie cuántas
 respondieron.
 
+Varios medios chilenos devuelven 404 o cortan la conexión ante clientes que no
+parecen un navegador, así que cada URL se reintenta con distintos User-Agent
+antes de darla por muerta.
+
 Para revisar el estado de los feeds: **Actions → Diagnóstico de fuentes → Run
-workflow**. También corre solo cada lunes.
+workflow**, con dos modos:
+
+- `check-feeds` — prueba las URLs configuradas (también corre solo cada lunes).
+- `descubrir` — además lee la portada de cada medio buscando sus feeds
+  declarados y prueba rutas habituales. Útil cuando un medio cambió de ruta y
+  hay que averiguar la nueva.
 
 ---
 
@@ -143,6 +163,9 @@ pip install -r requirements.txt
 
 # Ver qué fuentes responden
 python -m agente.main check-feeds
+
+# Buscar las URLs de feed reales (autodiscovery desde la portada)
+python -m agente.main descubrir
 
 # Generar la página en ./public sin mandar WhatsApp
 DRY_RUN=1 python -m agente.main run

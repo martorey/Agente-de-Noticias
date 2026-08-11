@@ -168,6 +168,45 @@ def check_feeds(config: Config) -> int:
     return 0 if ok else 1
 
 
+def discover(config: Config) -> int:
+    """Busca las URLs de feed reales de cada medio y las reporta."""
+    from .discover import discover_all
+
+    resultados = discover_all()
+    vivos = [d for d in resultados if d.working]
+
+    print(f"\n{len(vivos)}/{len(resultados)} medios con feed detectado\n")
+    filas = []
+    for d in resultados:
+        if d.working:
+            mejor = max(d.working, key=lambda c: c.entries)
+            print(f"  ✅ {d.source_name:<20} {mejor.entries:>3} titulares  {mejor.url}")
+            for extra in d.working:
+                if extra.url != mejor.url:
+                    print(f"     ↳ alternativa: {extra.url} ({extra.entries})")
+            if mejor.ua_label != "navegador":
+                print(f"     ↳ requiere User-Agent tipo '{mejor.ua_label}'")
+            filas.append(
+                f"| {d.source_name} | ✅ | {mejor.entries} | `{mejor.url}` | {mejor.ua_label} |"
+            )
+        else:
+            print(f"  ❌ {d.source_name:<20} {'; '.join(d.notes)}")
+            filas.append(f"| {d.source_name} | ❌ | 0 | — | {'; '.join(d.notes)} |")
+
+    _github_summary(
+        [
+            "## Feeds detectados",
+            "",
+            f"**{len(vivos)}/{len(resultados)}** medios con feed vivo.",
+            "",
+            "| Medio | Estado | Titulares | URL | Cliente |",
+            "| --- | --- | --- | --- | --- |",
+            *filas,
+        ]
+    )
+    return 0 if vivos else 1
+
+
 def preview_message(config: Config) -> int:
     """Muestra el WhatsApp que se enviaría, sin enviarlo."""
     sources = active_sources(config.extra_sources, config.excluded_sources)
@@ -208,10 +247,11 @@ def build_parser() -> argparse.ArgumentParser:
         "comando",
         nargs="?",
         default="run",
-        choices=["run", "check-feeds", "preview", "test-whatsapp"],
+        choices=["run", "check-feeds", "descubrir", "preview", "test-whatsapp"],
         help=(
             "run: corrida completa (por defecto). "
             "check-feeds: diagnóstico de fuentes. "
+            "descubrir: busca las URLs de feed reales de cada medio. "
             "preview: muestra el WhatsApp sin enviarlo. "
             "test-whatsapp: envía un mensaje de prueba."
         ),
@@ -236,6 +276,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.comando == "check-feeds":
         return check_feeds(config)
+    if args.comando == "descubrir":
+        return discover(config)
     if args.comando == "preview":
         return preview_message(config)
     if args.comando == "test-whatsapp":

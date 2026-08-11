@@ -68,6 +68,35 @@ def is_safe_url(url: str) -> bool:
     return scheme in _SAFE_SCHEMES
 
 
+def split_aggregator_title(title: str) -> tuple[str, str]:
+    """Separa "Titular - Medio" en (titular, medio).
+
+    Google News anexa el medio al final del titular. Sin separarlo, todas las
+    tarjetas se atribuirían al agregador y la deduplicación no reconocería la
+    misma noticia venida por el feed directo del medio.
+
+    Devuelve el medio vacío cuando el sufijo no parece un nombre de medio, para
+    no mutilar titulares que legítimamente contienen un guion.
+    """
+    limpio = title.strip()
+    if " - " not in limpio:
+        return limpio, ""
+
+    cabeza, _, cola = limpio.rpartition(" - ")
+    cola = cola.strip()
+    cabeza = cabeza.strip()
+
+    # Un nombre de medio es corto, de pocas palabras y no termina en puntuación
+    # de frase. El titular restante tiene que seguir siendo un titular.
+    if not cabeza or not cola:
+        return limpio, ""
+    if len(cola) > 32 or len(cola.split()) > 4 or cola[-1] in ".,;:!?":
+        return limpio, ""
+    if len(cabeza) < 20:
+        return limpio, ""
+    return cabeza, cola
+
+
 def canonical_url(url: str) -> str:
     """Normaliza un enlace para comparar: sin tracking, sin fragmento, sin www."""
     if not url:

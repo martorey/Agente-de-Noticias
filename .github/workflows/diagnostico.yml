@@ -4,8 +4,17 @@ name: Diagnóstico de fuentes
 # Útil al configurar el agente y cuando una fuente deja de aparecer.
 on:
   workflow_dispatch:
+    inputs:
+      modo:
+        description: "Qué revisar"
+        type: choice
+        default: check-feeds
+        options:
+          - check-feeds # prueba las URLs configuradas
+          - descubrir # además busca en la portada de cada medio
   schedule:
-    # Un chequeo semanal avisa si algún medio cambió la ruta de su RSS.
+    # El barrido semanal usa `descubrir`, que revisa también las fuentes
+    # apagadas: si un medio vuelve a publicar RSS, aparece en el reporte.
     - cron: "0 12 * * 1"
 
 permissions:
@@ -28,4 +37,5 @@ jobs:
         env:
           FUENTES_EXTRA: ${{ vars.FUENTES_EXTRA }}
           FUENTES_EXCLUIDAS: ${{ vars.FUENTES_EXCLUIDAS }}
-        run: python -m agente.main check-feeds
+        # En las corridas programadas `inputs` viene vacío y cae en `descubrir`.
+        run: python -m agente.main ${{ inputs.modo || 'descubrir' }}
