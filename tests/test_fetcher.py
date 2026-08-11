@@ -6,6 +6,7 @@ import pytest
 import requests
 from conftest import EMPTY_FEED, RSS_FIXTURE
 
+from agente import fetcher
 from agente.fetcher import fetch_all, fetch_source
 from agente.sources import Source
 
@@ -96,7 +97,35 @@ class TestFetchSource:
         assert result.ok
         assert result.url_used == "https://b.cl/rss"
         assert len(articles) == 2
-        assert session.calls == ["https://a.cl/rss", "https://b.cl/rss"]
+        # La primera URL se agota con todos los User-Agent antes de pasar a la
+        # siguiente; la segunda acierta al primer intento.
+        assert session.calls == ["https://a.cl/rss"] * len(fetcher.USER_AGENTS) + [
+            "https://b.cl/rss"
+        ]
+
+    def test_reintenta_con_otro_user_agent_ante_404(self, source, config):
+        """Varios medios devuelven 404 a clientes que no parecen navegador."""
+        intentos: list[str] = []
+
+        class UASession(FakeSession):
+            def get(self, url, **kwargs):
+                ua = kwargs["headers"]["User-Agent"]
+                intentos.append(ua)
+                # Sólo el segundo User-Agent es aceptado.
+                if ua != fetcher.USER_AGENTS[1]:
+                    return FakeResponse("bloqueado", status=404)
+                return FakeResponse(RSS_FIXTURE)
+
+        articles, result = fetch_source(source, config, UASession({}))
+        assert result.ok
+        assert len(articles) == 2
+        assert intentos[:2] == [fetcher.USER_AGENTS[0], fetcher.USER_AGENTS[1]]
+
+    def test_no_reintenta_user_agents_si_el_feed_esta_vacio(self, source, config):
+        """Un feed vacío es problema de la URL, no del cliente: no insistir."""
+        session = FakeSession({"https://a.cl/rss": FakeResponse(EMPTY_FEED)})
+        fetch_source(source, config, session)
+        assert session.calls.count("https://a.cl/rss") == 1
 
     def test_url_alternativa_ante_feed_vacio(self, source, config):
         session = FakeSession(

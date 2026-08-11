@@ -16,15 +16,25 @@ from .sources import Source
 
 log = logging.getLogger(__name__)
 
-USER_AGENT = (
+# Varios medios chilenos responden 404 o cortan la conexión ante clientes que no
+# parecen un navegador. El primero es el que funciona en la mayoría; los otros
+# se prueban sólo si el primero falla.
+USER_AGENTS = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Feedly/1.0 (+https://feedly.com/fetcher.html; like FeedFetcher-Google)",
     "Mozilla/5.0 (compatible; AgenteDeNoticias/1.0; "
-    "+https://github.com/martorey/Agente-de-Noticias)"
+    "+https://github.com/martorey/Agente-de-Noticias)",
 )
-HEADERS = {
-    "User-Agent": USER_AGENT,
+
+BASE_HEADERS = {
     "Accept": "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8",
     "Accept-Language": "es-CL,es;q=0.9,en;q=0.5",
 }
+
+
+def _headers(user_agent: str) -> dict[str, str]:
+    return {**BASE_HEADERS, "User-Agent": user_agent}
 
 
 def _parse_date(entry) -> datetime | None:
@@ -98,47 +108,52 @@ def fetch_source(
 
     try:
         for url in source.urls:
-            try:
-                response = session.get(
-                    url, headers=HEADERS, timeout=config.request_timeout
-                )
-                response.raise_for_status()
-                parsed = feedparser.parse(response.content)
-                entries = parsed.entries or []
-                if not entries:
-                    last_error = f"feed sin entradas ({url})"
-                    continue
+            for user_agent in USER_AGENTS:
+                try:
+                    response = session.get(
+                        url,
+                        headers=_headers(user_agent),
+                        timeout=config.request_timeout,
+                    )
+                    response.raise_for_status()
+                    parsed = feedparser.parse(response.content)
+                    entries = parsed.entries or []
+                    if not entries:
+                        last_error = f"feed sin entradas ({url})"
+                        break  # el problema es la URL, no el cliente
 
-                articles = []
-                for entry in entries[: source.max_items]:
-                    article = _entry_to_article(entry, source)
-                    if article:
-                        articles.append(article)
+                    articles = []
+                    for entry in entries[: source.max_items]:
+                        article = _entry_to_article(entry, source)
+                        if article:
+                            articles.append(article)
 
-                if not articles:
-                    last_error = f"entradas sin título/enlace ({url})"
-                    continue
+                    if not articles:
+                        last_error = f"entradas sin título/enlace ({url})"
+                        break
 
-                elapsed = int((time.monotonic() - started) * 1000)
-                log.info(
-                    "%s: %d noticias desde %s (%d ms)",
-                    source.name,
-                    len(articles),
-                    url,
-                    elapsed,
-                )
-                return articles, FeedResult(
-                    source_name=source.name,
-                    section=source.section,
-                    ok=True,
-                    url_used=url,
-                    article_count=len(articles),
-                    elapsed_ms=elapsed,
-                )
-            except requests.RequestException as exc:
-                last_error = f"{type(exc).__name__}: {exc}"
-            except Exception as exc:  # feedparser/XML rotos no deben tumbar la corrida
-                last_error = f"{type(exc).__name__}: {exc}"
+                    elapsed = int((time.monotonic() - started) * 1000)
+                    log.info(
+                        "%s: %d noticias desde %s (%d ms)",
+                        source.name,
+                        len(articles),
+                        url,
+                        elapsed,
+                    )
+                    return articles, FeedResult(
+                        source_name=source.name,
+                        section=source.section,
+                        ok=True,
+                        url_used=url,
+                        article_count=len(articles),
+                        elapsed_ms=elapsed,
+                    )
+                except requests.RequestException as exc:
+                    # 404/403/reset suelen ser bloqueo por cliente: probar otro UA.
+                    last_error = f"{type(exc).__name__}: {exc}"
+                except Exception as exc:  # XML roto no debe tumbar la corrida
+                    last_error = f"{type(exc).__name__}: {exc}"
+                    break
     finally:
         if owns_session:
             session.close()
