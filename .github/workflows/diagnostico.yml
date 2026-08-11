@@ -1,0 +1,31 @@
+name: Diagnóstico de fuentes
+
+# Ejecutar a mano desde la pestaña Actions para ver qué feeds responden.
+# Útil al configurar el agente y cuando una fuente deja de aparecer.
+on:
+  workflow_dispatch:
+  schedule:
+    # Un chequeo semanal avisa si algún medio cambió la ruta de su RSS.
+    - cron: "0 12 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Revisar feeds
+        env:
+          FUENTES_EXTRA: ${{ vars.FUENTES_EXTRA }}
+          FUENTES_EXCLUIDAS: ${{ vars.FUENTES_EXCLUIDAS }}
+        run: python -m agente.main check-feeds
