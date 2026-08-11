@@ -131,8 +131,17 @@ declara varias URLs candidatas y el agente usa la primera que responde. Si una
 fuente se cae, la corrida sigue con el resto y la página muestra al pie cuántas
 respondieron.
 
+Varios medios chilenos devuelven 404 o cortan la conexión ante clientes que no
+parecen un navegador, así que cada URL se reintenta con distintos User-Agent
+antes de darla por muerta.
+
 Para revisar el estado de los feeds: **Actions → Diagnóstico de fuentes → Run
-workflow**. También corre solo cada lunes.
+workflow**, con dos modos:
+
+- `check-feeds` — prueba las URLs configuradas (también corre solo cada lunes).
+- `descubrir` — además lee la portada de cada medio buscando sus feeds
+  declarados y prueba rutas habituales. Útil cuando un medio cambió de ruta y
+  hay que averiguar la nueva.
 
 ---
 
@@ -143,6 +152,9 @@ pip install -r requirements.txt
 
 # Ver qué fuentes responden
 python -m agente.main check-feeds
+
+# Buscar las URLs de feed reales (autodiscovery desde la portada)
+python -m agente.main descubrir
 
 # Generar la página en ./public sin mandar WhatsApp
 DRY_RUN=1 python -m agente.main run

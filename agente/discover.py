@@ -146,7 +146,7 @@ def discover_source(source: Source, max_hits: int = 3) -> Discovery:
                 continue
             vistos.add(url)
             for ua_label, ua in USER_AGENTS:
-                hit = _probe(url, ua_label)
+                hit = _probe(url, ua_label, ua)
                 if hit:
                     result.working.append(hit)
                     if etiqueta:
