@@ -77,7 +77,12 @@ jobs:
           path: .estado
           key: estado-noticias-${{ github.run_id }}
 
+      # enablement activa Pages por API en la primera corrida, así no hay que
+      # configurarlo a mano. Falla igual si el repositorio es privado y la
+      # cuenta no tiene Pages disponible.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:
