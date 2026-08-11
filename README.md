@@ -56,14 +56,16 @@ En **Settings → Secrets and variables → Actions → New repository secret**:
 | `CALLMEBOT_PHONE` | Tu número con código de país | `+56912345678` |
 | `CALLMEBOT_APIKEY` | La key que te dio CallMeBot | `123456` |
 
-### 3. GitHub Pages
+### 3. Activar GitHub Pages
 
-El workflow intenta activarlo solo en la primera corrida, así que normalmente
-no hay nada que hacer.
-
-Si falla con *"Get Pages site failed"*, activalo a mano en
-**Settings → Pages → Build and deployment → Source → GitHub Actions**
+En **Settings → Pages → Build and deployment → Source**, elegí **GitHub Actions**
 (no "Deploy from a branch").
+
+El workflow intenta activarlo solo, pero con el repositorio privado GitHub
+rechaza el intento (*"Create Pages site failed: Resource not accessible by
+integration"*): el token de Actions no puede crear el sitio. Puede que funcione
+una vez que el repositorio sea público; no está verificado, así que contá con
+hacerlo a mano.
 
 La página va a quedar en:
 `https://martorey.github.io/Agente-de-Noticias/`
