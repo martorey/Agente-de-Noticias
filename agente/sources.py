@@ -198,7 +198,11 @@ INTERNACIONAL_SOURCES: tuple[Source, ...] = (
     Source(
         name="Euronews",
         section=INTERNACIONAL,
-        urls=("https://es.euronews.com/rss",),
+        urls=(
+            "https://es.euronews.com/rss",
+            # La ruta simple devuelve un feed vacío de forma intermitente.
+            "https://es.euronews.com/rss?level=theme&name=news",
+        ),
         homepage="https://es.euronews.com",
         max_items=25,
     ),
