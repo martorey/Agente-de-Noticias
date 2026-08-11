@@ -1,0 +1,88 @@
+name: Agente de noticias
+
+on:
+  schedule:
+    # Cada 2 horas, en punto. GitHub encola los cron con demora variable (a
+    # veces varios minutos), así que el intervalo real ronda las 2 horas y algo.
+    - cron: "0 */2 * * *"
+  workflow_dispatch:
+    inputs:
+      sin_whatsapp:
+        description: "Publicar la página sin enviar el WhatsApp"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Si una corrida se solapa con la anterior, la nueva espera: así el estado de
+# noticias vistas no se pisa entre ejecuciones.
+concurrency:
+  group: noticias
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      # El estado (qué titulares ya se vieron) vive en la caché en lugar del
+      # repositorio, para no generar 48 commits diarios.
+      - name: Restaurar estado
+        uses: actions/cache/restore@v4
+        with:
+          path: .estado
+          key: estado-noticias-${{ github.run_id }}
+          restore-keys: |
+            estado-noticias-
+
+      - name: Recolectar noticias y avisar
+        env:
+          SITE_URL: ${{ vars.SITE_URL || format('https://{0}.github.io/{1}', github.repository_owner, github.event.repository.name) }}
+          SITE_TITLE: ${{ vars.SITE_TITLE || 'Últimas noticias' }}
+          TIMEZONE: ${{ vars.TIMEZONE || 'America/Santiago' }}
+          NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'solo-nuevas' }}
+          NOTIFY_HEADLINES: ${{ vars.NOTIFY_HEADLINES || '3' }}
+          MAX_ITEMS_PER_SECTION: ${{ vars.MAX_ITEMS_PER_SECTION || '40' }}
+          MAX_AGE_HOURS: ${{ vars.MAX_AGE_HOURS || '24' }}
+          FUENTES_EXTRA: ${{ vars.FUENTES_EXTRA }}
+          FUENTES_EXCLUIDAS: ${{ vars.FUENTES_EXCLUIDAS }}
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+          DRY_RUN: ${{ inputs.sin_whatsapp && '1' || '0' }}
+          OUTPUT_DIR: public
+        run: python -m agente.main run
+
+      - name: Guardar estado
+        # Se guarda aunque el envío del WhatsApp haya fallado, para no repetir
+        # los mismos titulares en la próxima corrida.
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .estado
+          key: estado-noticias-${{ github.run_id }}
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+      - name: Publicar en GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
