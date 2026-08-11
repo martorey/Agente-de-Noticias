@@ -118,13 +118,24 @@ Ojo: el cron se interpreta en **UTC**, y Chile está 3 o 4 horas atrás según l
 
 ## Fuentes
 
-**Chile** — Emol, BioBioChile, La Tercera, Cooperativa, T13, El Mostrador,
-24 Horas, ADN Radio, CNN Chile, La Nación, El Dínamo, Ex-Ante, Meganoticias,
-Diario Financiero.
+Verificadas el 11-08-2026 con el workflow de diagnóstico.
 
-**Internacional** — BBC Mundo, DW Español, France 24, Euronews, CNN Español,
-El País, Infobae, swissinfo. (Al Jazeera y The Guardian están disponibles pero
-apagadas por estar en inglés.)
+**Chile** — La Tercera, ADN Radio, BioBioChile, Ex-Ante, La Nación y Google
+News Chile.
+
+**Internacional** — BBC Mundo, Euronews, France 24, El País, DW Español,
+Infobae y Google News Mundo.
+
+Emol, T13, Cooperativa, El Mostrador, 24 Horas, CNN Chile, Meganoticias,
+El Dínamo y Diario Financiero **bloquean el acceso a su RSS** (404 en todas las
+rutas conocidas; Emol directamente corta la conexión). Entran igual a la página
+a través de Google News, que sí los indexa: el agente toma el medio real del
+titular, así que las tarjetas dicen "Emol" o "T13", no "Google News".
+
+Quedan declaradas pero apagadas para que el diagnóstico semanal las siga
+revisando; si vuelven a publicar RSS basta con poner `enabled=True` en
+`agente/sources.py`. Al Jazeera y The Guardian también están apagadas, por estar
+en inglés: se habilitan con `FUENTES_EXTRA`.
 
 Los medios cambian la ruta de sus feeds de vez en cuando, así que cada fuente
 declara varias URLs candidatas y el agente usa la primera que responde. Si una

@@ -70,12 +70,18 @@ def _extract_image(entry) -> str:
 
 
 def _entry_to_article(entry, source: Source) -> Article | None:
-    from .processing import clean_text, is_safe_url
+    from .processing import clean_text, is_safe_url, split_aggregator_title
 
     title = clean_text(entry.get("title", ""))
     link = (entry.get("link") or "").strip()
     if not title or not link:
         return None
+
+    nombre_fuente = source.name
+    if source.aggregator:
+        title, medio = split_aggregator_title(title)
+        if medio:
+            nombre_fuente = medio
     if not is_safe_url(link):
         # Los feeds son contenido de terceros: un enlace que no sea http(s)
         # no tiene por qué llegar a la página.
@@ -89,7 +95,7 @@ def _entry_to_article(entry, source: Source) -> Article | None:
     return Article(
         title=title,
         link=link,
-        source=source.name,
+        source=nombre_fuente,
         section=source.section,
         published=_parse_date(entry),
         summary=summary,
