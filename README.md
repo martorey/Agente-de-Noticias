@@ -56,9 +56,13 @@ En **Settings → Secrets and variables → Actions → New repository secret**:
 | `CALLMEBOT_PHONE` | Tu número con código de país | `+56912345678` |
 | `CALLMEBOT_APIKEY` | La key que te dio CallMeBot | `123456` |
 
-### 3. Activar GitHub Pages
+### 3. GitHub Pages
 
-En **Settings → Pages → Build and deployment → Source**, elegí **GitHub Actions**
+El workflow intenta activarlo solo en la primera corrida, así que normalmente
+no hay nada que hacer.
+
+Si falla con *"Get Pages site failed"*, activalo a mano en
+**Settings → Pages → Build and deployment → Source → GitHub Actions**
 (no "Deploy from a branch").
 
 La página va a quedar en:
