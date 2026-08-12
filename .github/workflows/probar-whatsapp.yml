@@ -1,0 +1,28 @@
+name: Probar WhatsApp
+
+# Manda un mensaje de prueba para comprobar las credenciales de CallMeBot,
+# sin depender de que haya noticias nuevas ni de la corrida programada.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Enviar mensaje de prueba
+        env:
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: python -m agente.main test-whatsapp
