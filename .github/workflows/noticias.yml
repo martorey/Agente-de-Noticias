@@ -2,9 +2,11 @@ name: Agente de noticias
 
 on:
   schedule:
-    # Cada 2 horas, en punto. GitHub encola los cron con demora variable (a
-    # veces varios minutos), así que el intervalo real ronda las 2 horas y algo.
-    - cron: "0 */2 * * *"
+    # Tres veces al día: 8:00, 13:00 y 20:00 hora de Chile (UTC-3, horario de
+    # verano). En horario de invierno (UTC-4, abril-septiembre) esto corre una
+    # hora antes en el reloj chileno —7:00, 12:00, 19:00—, porque el cron de
+    # GitHub es UTC fijo y no se ajusta solo al cambio de hora.
+    - cron: "0 11,16,23 * * *"
   workflow_dispatch:
     inputs:
       sin_whatsapp:
@@ -42,7 +44,7 @@ jobs:
         run: pip install -r requirements.txt
 
       # El estado (qué titulares ya se vieron) vive en la caché en lugar del
-      # repositorio, para no generar 48 commits diarios.
+      # repositorio, para no generar un commit por corrida.
       - name: Restaurar estado
         uses: actions/cache/restore@v4
         with:
@@ -57,6 +59,7 @@ jobs:
           SITE_TITLE: ${{ vars.SITE_TITLE || 'Últimas noticias' }}
           TIMEZONE: ${{ vars.TIMEZONE || 'America/Santiago' }}
           NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'solo-nuevas' }}
+          NOTIFY_MIN_NEW: ${{ vars.NOTIFY_MIN_NEW || '10' }}
           NOTIFY_HEADLINES: ${{ vars.NOTIFY_HEADLINES || '3' }}
           MAX_ITEMS_PER_SECTION: ${{ vars.MAX_ITEMS_PER_SECTION || '40' }}
           MAX_AGE_HOURS: ${{ vars.MAX_AGE_HOURS || '24' }}
