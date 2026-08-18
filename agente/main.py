@@ -88,9 +88,17 @@ def run(config: Config) -> int:
     message = build_message(grouped, config, url, generated_at, new_count)
 
     should_notify = True
-    if config.notify_mode == "solo-nuevas" and new_count == 0:
+    if config.notify_mode == "solo-nuevas" and new_count < config.notify_min_new:
         should_notify = False
-        log.info("NOTIFY_MODE=solo-nuevas y no hay novedades: no se envía WhatsApp.")
+        if new_count == 0:
+            log.info("NOTIFY_MODE=solo-nuevas y no hay novedades: no se envía WhatsApp.")
+        else:
+            log.info(
+                "NOTIFY_MODE=solo-nuevas: %d nuevos, por debajo del umbral "
+                "(NOTIFY_MIN_NEW=%d); no se envía WhatsApp.",
+                new_count,
+                config.notify_min_new,
+            )
 
     notify = None
     if should_notify:
@@ -101,7 +109,13 @@ def run(config: Config) -> int:
     if notify and notify.sent:
         estado_aviso = "✅ enviado"
     elif not should_notify:
-        estado_aviso = "⏭️ omitido (sin novedades)"
+        if new_count == 0:
+            estado_aviso = "⏭️ omitido (sin novedades)"
+        else:
+            estado_aviso = (
+                f"⏭️ omitido ({new_count} nuevos, bajo el umbral de "
+                f"{config.notify_min_new})"
+            )
     elif notify:
         estado_aviso = f"⚠️ no enviado ({notify.reason})"
     else:

@@ -53,6 +53,10 @@ class Config:
     # "solo-nuevas" calla cuando no hay titulares nuevos respecto de la corrida
     # anterior; "siempre" envía en cada corrida.
     notify_mode: str = "solo-nuevas"
+    # Con notify_mode=solo-nuevas, cuántos titulares nuevos hacen falta para
+    # avisar. El default (1) preserva "cualquier novedad avisa"; subirlo evita
+    # mensajes por una sola nota suelta y los reserva para cuando pasó volumen.
+    notify_min_new: int = 1
     notify_headlines: int = 3
     dry_run: bool = False
 
@@ -88,6 +92,7 @@ class Config:
             whatsapp_apikey=os.environ.get("CALLMEBOT_APIKEY", "").strip(),
             notify_mode=os.environ.get("NOTIFY_MODE", "solo-nuevas").strip().lower()
             or "solo-nuevas",
+            notify_min_new=_env_int("NOTIFY_MIN_NEW", 1),
             notify_headlines=_env_int("NOTIFY_HEADLINES", 3),
             dry_run=_env_bool("DRY_RUN", False),
             state_file=os.environ.get("STATE_FILE", ".estado/vistos.json").strip()

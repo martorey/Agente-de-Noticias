@@ -1,8 +1,9 @@
 # Agente de Noticias
 
-Cada 2 horas recolecta los titulares nacionales (Chile) e internacionales de una
-veintena de medios, los deduplica, publica una página web con el resultado y te
-manda el enlace por WhatsApp cuando hay noticias nuevas.
+Tres veces al día recolecta los titulares nacionales (Chile) e internacionales
+de una veintena de medios, los deduplica, publica una página web con el
+resultado y te manda el enlace por WhatsApp cuando hay volumen suficiente de
+noticias nuevas.
 
 Todo corre en GitHub Actions: no hace falta un servidor ni dejar el computador
 encendido.
@@ -15,23 +16,15 @@ RSS de ~24 medios ──▶ deduplicar y ordenar ──▶ página en GitHub Pag
 
 ---
 
-## ⚠️ Antes de empezar: este repositorio es privado
+## Estado: en producción
 
-GitHub Pages **no funciona en repositorios privados** con una cuenta gratuita, y
-las corridas de Actions consumen la cuota mensual (12 corridas diarias gastan
-cerca del 18% de los 2.000 minutos gratis).
+El repositorio es público y GitHub Pages está activo. La página se actualiza
+sola tres veces al día — no hace falta ninguna acción manual para que siga
+funcionando.
 
-Tenés dos caminos:
-
-| Opción | Qué hacer | Costo |
-| --- | --- | --- |
-| **Hacer el repo público** (recomendado) | Settings → General → abajo → *Change visibility* → Public | Gratis, Actions ilimitado |
-| Mantenerlo privado | Necesitás GitHub Pro | ~4 USD/mes |
-
-Importante en cualquier caso: **la página publicada es pública**. Aun con
-GitHub Pro y el repositorio privado, el sitio de Pages queda accesible para
-cualquiera que tenga el enlace. Como sólo contiene titulares y enlaces de medios
-públicos, no hay información sensible, pero conviene saberlo.
+La página publicada es pública: cualquiera con el enlace puede verla. Como
+sólo contiene titulares y enlaces de medios públicos, no hay información
+sensible — se puede compartir el enlace libremente.
 
 ---
 
@@ -91,6 +84,7 @@ Se configuran en **Settings → Secrets and variables → Actions → Variables*
 | `SITE_TITLE` | `Últimas noticias` | Título de la página y del WhatsApp |
 | `TIMEZONE` | `America/Santiago` | Zona horaria de las horas mostradas |
 | `NOTIFY_MODE` | `solo-nuevas` | Sólo avisa si hay titulares nuevos; `siempre` avisa en cada corrida |
+| `NOTIFY_MIN_NEW` | `10` | Con `solo-nuevas`, mínimo de titulares nuevos para avisar (sólo importa mientras `NOTIFY_MODE=solo-nuevas`) |
 | `NOTIFY_HEADLINES` | `3` | Cuántos titulares por sección van en el WhatsApp |
 | `MAX_ITEMS_PER_SECTION` | `40` | Cuántas noticias muestra la página por sección |
 | `MAX_AGE_HOURS` | `24` | Descarta noticias más viejas que esto |
@@ -100,25 +94,36 @@ Se configuran en **Settings → Secrets and variables → Actions → Variables*
 
 ### Cadencia de los avisos
 
-La configuración actual: la página se actualiza **cada 2 horas** y el WhatsApp
-llega **sólo cuando hay titulares nuevos** (`NOTIFY_MODE=solo-nuevas`). En la
-práctica son unos pocos mensajes al día, concentrados en las horas de más
-movimiento noticioso.
+La configuración actual: la página se actualiza **tres veces al día** (8:00,
+13:00 y 20:00 hora de Chile) y el WhatsApp llega sólo cuando esa corrida trajo
+**10 o más titulares nuevos** respecto de la anterior (`NOTIFY_MODE=solo-nuevas`
++ `NOTIFY_MIN_NEW=10`). Con volumen normal de noticias eso suele cumplirse casi
+siempre; el umbral filtra sobre todo los días tranquilos, no cada corrida.
 
-Para cambiarlo sin tocar código, creá la variable `NOTIFY_MODE` con valor
-`siempre` y vas a recibir un mensaje en cada corrida, aunque no haya novedades.
+Dos perillas independientes, sin tocar código, ambas en **Settings → Secrets
+and variables → Actions → Variables**:
+
+- `NOTIFY_MIN_NEW` — subila para exigir más volumen antes de avisar (por
+  ejemplo `20`), bajala a `1` para que cualquier titular nuevo dispare el
+  aviso. Sólo tiene efecto con `NOTIFY_MODE=solo-nuevas`.
+- `NOTIFY_MODE=siempre` — ignora el umbral y avisa en cada corrida, aunque no
+  haya novedades.
 
 Para cambiar la frecuencia, editá el cron en `.github/workflows/noticias.yml`:
 
 | Cron | Frecuencia |
 | --- | --- |
-| `0 */2 * * *` | cada 2 horas (actual) |
+| `0 11,16,23 * * *` | 3 veces al día — 8:00, 13:00, 20:00 en Chile (actual) |
+| `0 */2 * * *` | cada 2 horas |
 | `*/30 * * * *` | cada 30 minutos |
 | `0 */6 * * *` | cada 6 horas |
-| `0 11,16,23 * * *` | 3 veces al día (8:00, 13:00 y 20:00 en Chile) |
 
-Ojo: el cron se interpreta en **UTC**, y Chile está 3 o 4 horas atrás según la
-época del año.
+Ojo con dos cosas: el cron se interpreta en **UTC**, y Chile alterna entre
+UTC-3 (horario de verano, septiembre-abril) y UTC-4 (invierno, abril-septiembre)
+— la tabla de arriba asume horario de verano, así que en invierno el agente
+corre una hora antes en el reloj chileno (7:00, 12:00, 19:00). Como el cron no
+se ajusta solo, hay que recalcular la hora dos veces al año si el horario
+exacto importa.
 
 ---
 
@@ -222,8 +227,8 @@ la próxima corrida trata todo como nuevo: no se rompe nada.
 ## Limitaciones conocidas
 
 - **El cron de GitHub no es puntual.** Las corridas programadas se encolan y
-  pueden demorarse entre 5 y 20 minutos en horarios de alta demanda. El
-  intervalo real ronda los 30-45 minutos.
+  pueden demorarse entre 5 y 20 minutos en horarios de alta demanda: una
+  corrida programada para las 20:00 puede arrancar recién a las 20:15.
 - **Actions se desactiva tras 60 días sin actividad** en el repositorio. GitHub
   avisa por correo antes; basta con volver a habilitar el workflow desde la
   pestaña Actions, o hacer cualquier commit.

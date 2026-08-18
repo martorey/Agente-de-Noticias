@@ -173,6 +173,42 @@ def test_modo_solo_nuevas_omite_el_envio(sources, config, monkeypatch):
     assert len(mensajes) == 1
 
 
+def test_umbral_omite_avisos_por_debajo_del_minimo(sources, config, monkeypatch):
+    """NOTIFY_MIN_NEW sube la vara de 'novedad': no alcanza con una sola nota."""
+    cfg = dataclasses.replace(config, notify_mode="solo-nuevas", notify_min_new=10)
+    monkeypatch.setattr(main_mod, "active_sources", lambda *a, **k: sources)
+    mensajes: list[str] = []
+    _capturar_envios(monkeypatch, mensajes)
+
+    # Primera corrida: 4 titulares nuevos, por debajo del umbral de 10.
+    codigo = main_mod.run(cfg)
+    assert codigo == 0
+    assert mensajes == []
+
+
+def test_umbral_avisa_al_superarlo(sources, config, monkeypatch):
+    cfg = dataclasses.replace(config, notify_mode="solo-nuevas", notify_min_new=3)
+    monkeypatch.setattr(main_mod, "active_sources", lambda *a, **k: sources)
+    mensajes: list[str] = []
+    _capturar_envios(monkeypatch, mensajes)
+
+    # 4 titulares nuevos superan el umbral de 3: sí avisa.
+    main_mod.run(cfg)
+    assert len(mensajes) == 1
+    assert "4 nuevos" in mensajes[0]
+
+
+def test_umbral_no_aplica_con_notify_mode_siempre(sources, config, monkeypatch):
+    """El umbral es una afinación de solo-nuevas; siempre ignora el conteo."""
+    cfg = dataclasses.replace(config, notify_mode="siempre", notify_min_new=999)
+    monkeypatch.setattr(main_mod, "active_sources", lambda *a, **k: sources)
+    mensajes: list[str] = []
+    _capturar_envios(monkeypatch, mensajes)
+
+    main_mod.run(cfg)
+    assert len(mensajes) == 1
+
+
 def test_sin_fuentes_vivas_no_publica(config, monkeypatch, server):
     rotas = [Source(name="Rota", section="nacional", urls=(f"{server}/roto.xml",))]
     monkeypatch.setattr(main_mod, "active_sources", lambda *a, **k: rotas)
