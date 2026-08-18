@@ -109,21 +109,40 @@ and variables → Actions → Variables**:
 - `NOTIFY_MODE=siempre` — ignora el umbral y avisa en cada corrida, aunque no
   haya novedades.
 
-Para cambiar la frecuencia, editá el cron en `.github/workflows/noticias.yml`:
+**La cadencia actual se ajusta sola al cambio de horario.** El cron de
+`.github/workflows/noticias.yml` dispara 6 veces al día — la unión de las 3
+horas objetivo (8:00, 13:00, 20:00 en Chile) convertidas a UTC tanto para
+verano (UTC-3) como para invierno (UTC-4):
 
-| Cron | Frecuencia |
-| --- | --- |
-| `0 11,16,23 * * *` | 3 veces al día — 8:00, 13:00, 20:00 en Chile (actual) |
-| `0 */2 * * *` | cada 2 horas |
-| `*/30 * * * *` | cada 30 minutos |
-| `0 */6 * * *` | cada 6 horas |
+```
+- cron: "0 0,11,12,16,17,23 * * *"
+```
 
-Ojo con dos cosas: el cron se interpreta en **UTC**, y Chile alterna entre
-UTC-3 (horario de verano, septiembre-abril) y UTC-4 (invierno, abril-septiembre)
-— la tabla de arriba asume horario de verano, así que en invierno el agente
-corre una hora antes en el reloj chileno (7:00, 12:00, 19:00). Como el cron no
-se ajusta solo, hay que recalcular la hora dos veces al año si el horario
-exacto importa.
+Un primer job (`horario`) comprueba la hora real de Chile (`TZ=America/Santiago
+date`, que conoce las fechas exactas del cambio de horario) y descarta las 3
+corridas que no correspondan a la temporada actual. El otro job (`publicar`)
+sólo corre cuando `horario` dice que sí. Resultado: siempre son 3 avisos al
+día, a la hora chilena correcta, sin tocar nada dos veces al año. Los
+disparos manuales (*Run workflow*) no pasan por este filtro — siempre corren,
+sin importar la hora.
+
+Para cambiar la frecuencia hay dos casos:
+
+- **Un intervalo fijo** (cada 2 horas, cada 30 minutos): no depende de horas
+  de reloj, así que el cambio de horario no le afecta. Basta con editar el
+  cron y borrar el job `horario` (o el `needs`/`if` que lo usa en `publicar`),
+  porque ya no hay "horas objetivo" que verificar:
+
+  | Cron | Frecuencia |
+  | --- | --- |
+  | `0 */2 * * *` | cada 2 horas |
+  | `*/30 * * * *` | cada 30 minutos |
+  | `0 */6 * * *` | cada 6 horas |
+
+- **Otras horas fijas** (por ejemplo 9:00, 14:00, 21:00 en vez de 8/13/20):
+  hay que recalcular el cron para cubrir ambos husos horarios y actualizar la
+  lista `08|13|20` del job `horario`, siguiendo la misma idea que la
+  configuración actual.
 
 ---
 

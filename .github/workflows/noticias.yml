@@ -2,11 +2,12 @@ name: Agente de noticias
 
 on:
   schedule:
-    # Tres veces al día: 8:00, 13:00 y 20:00 hora de Chile (UTC-3, horario de
-    # verano). En horario de invierno (UTC-4, abril-septiembre) esto corre una
-    # hora antes en el reloj chileno —7:00, 12:00, 19:00—, porque el cron de
-    # GitHub es UTC fijo y no se ajusta solo al cambio de hora.
-    - cron: "0 11,16,23 * * *"
+    # Dispara 6 veces al día: la unión de las 3 horas objetivo en Chile
+    # (8:00, 13:00, 20:00) convertidas a UTC para verano (UTC-3) e invierno
+    # (UTC-4). El job "horario" descarta las 3 corridas que no correspondan
+    # a la temporada actual, así el aviso siempre sale a la hora chilena
+    # correcta sin tener que tocar el cron cuando cambia el horario.
+    - cron: "0 0,11,12,16,17,23 * * *"
   workflow_dispatch:
     inputs:
       sin_whatsapp:
@@ -26,7 +27,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Corre siempre (es liviano) y decide si esta corrida cae en una de las 3
+  # horas objetivo en Chile. Como usa la hora real del huso "America/Santiago",
+  # el resultado ya viene correcto en verano y en invierno sin distinguirlos
+  # a mano. Los disparos manuales (Run workflow) no se filtran: siempre corren.
+  horario:
+    runs-on: ubuntu-latest
+    outputs:
+      correr: ${{ steps.check.outputs.correr }}
+    steps:
+      - name: Verificar si corresponde correr (hora de Chile)
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "correr=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          hora_cl=$(TZ=America/Santiago date +%H)
+          case "$hora_cl" in
+            08|13|20) echo "correr=true" >> "$GITHUB_OUTPUT" ;;
+            *) echo "correr=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
   publicar:
+    needs: horario
+    if: needs.horario.outputs.correr == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
